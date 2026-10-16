@@ -1,0 +1,6 @@
+{
+  "name": "LCO macOS instrument app",
+  "description": "Release arm64 build of an LCO Cocoa instrument app, with artifacts for the instrument updater.",
+  "iconName": "octicon device-desktop",
+  "categories": ["Objective-C", "Xcode"]
+}

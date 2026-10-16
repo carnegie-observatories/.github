@@ -1,0 +1,23 @@
+# CI for an LCO macOS instrument app, built by the shared workflow in
+# carnegie-observatories/.github. Set app (and pre-build/submodules if needed).
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    # forks can't reach the private shared workflow; their PRs build here
+    if: github.repository_owner == 'carnegie-observatories'
+    uses: carnegie-observatories/.github/.github/workflows/macos-app.yml@v1
+    with:
+      app: <APP>

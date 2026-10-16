@@ -1,0 +1,77 @@
+# Builds an LCO macOS instrument app: Release, arm64, Info.plist stamped with
+# the release tag (or 0.0.0-<sha>) and the short SHA. Uploads <APP>-<sha>.app
+# as a workflow artifact; on a release also <APP>-<tag>-<sha>.app.zip and
+# latest-version.txt, which lco-ansible's instrument-updater.sh installs.
+name: macOS app
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        description: Scheme; project src/<app>.xcodeproj, plist src/<app>/Info.plist
+        type: string
+        required: true
+      configuration:
+        type: string
+        default: Release
+      submodules:
+        type: boolean
+        default: false
+      pre-build:
+        description: Shell script run before xcodebuild (servers, simulators)
+        type: string
+        default: ""
+      runs-on:
+        description: Runner label, e.g. a self-hosted Mac
+        type: string
+        default: macos-latest
+
+jobs:
+  build:
+    runs-on: ${{ inputs.runs-on }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      APP: ${{ inputs.app }}
+      CONFIG: ${{ inputs.configuration }}
+      TAG: ${{ github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # tags, for the apps' git describe stamp
+          submodules: ${{ inputs.submodules }}
+
+      - name: Stamp Info.plist
+        run: |
+          sha=$(git rev-parse --short HEAD)
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${TAG:-0.0.0-$sha}" \
+            -c "Set :CFBundleVersion $sha" "src/$APP/Info.plist"
+          echo "NAME=$APP-${TAG:+$TAG-}$sha.app" >> "$GITHUB_ENV"
+
+      - name: Pre-build
+        if: inputs.pre-build != ''
+        env:
+          PRE_BUILD: ${{ inputs.pre-build }}
+        run: bash -euo pipefail -c "$PRE_BUILD"
+
+      - name: Build
+        run: >-
+          xcodebuild build -project "src/$APP.xcodeproj" -scheme "$APP"
+          -configuration "$CONFIG" -destination generic/platform=macOS
+          -derivedDataPath "$RUNNER_TEMP/dd" ARCHS=arm64 ONLY_ACTIVE_ARCH=NO
+
+      - name: Collect the .app # without the .dSYM
+        run: mkdir out && mv "$RUNNER_TEMP/dd/Build/Products/$CONFIG/$APP.app" out/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.NAME }}
+          path: out
+          include-hidden-files: true
+
+      - name: Release asset
+        if: github.event_name == 'release'
+        run: |
+          (cd out && zip -qr "../$NAME.zip" "$APP.app")
+          echo "$TAG" > latest-version.txt
+          gh release upload "$TAG" "$NAME.zip"
+          gh release upload "$TAG" latest-version.txt --clobber
