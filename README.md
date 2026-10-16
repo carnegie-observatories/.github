@@ -1,6 +1,6 @@
 # carnegie-observatories/.github
 
-Shared GitHub Actions for the LCO instrument repos.
+Shared GitHub Actions for the LCO instrument repos (public: nothing secret here; the app repos stay private).
 
 - `.github/workflows/macos-app.yml`: reusable build of a macOS instrument app
   (Release, arm64). Call it from the app's `.github/workflows/ci.yml`; the

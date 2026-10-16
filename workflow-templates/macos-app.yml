@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   build:
-    # forks can't reach the private shared workflow; their PRs build here
+    # skip on forks (no sbs-mac runner there); their PRs build here
     if: github.repository_owner == 'carnegie-observatories'
     uses: carnegie-observatories/.github/.github/workflows/macos-app.yml@v1
     with:
