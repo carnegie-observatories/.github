@@ -40,6 +40,10 @@ jobs:
           fetch-depth: 0 # tags, for the apps' git describe stamp
           submodules: ${{ inputs.submodules }}
 
+      - name: Clean submodules # the self-hosted runner keeps its workspace
+        if: inputs.submodules
+        run: git submodule foreach --recursive git clean -ffdx
+
       - name: Stamp Info.plist
         run: |
           sha=$(git rev-parse --short HEAD)
